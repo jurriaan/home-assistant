@@ -351,20 +351,24 @@ class MatrixBot:
 
         return _client
 
-    def _send_image(self, img, target_rooms):
-        _LOGGER.debug("Uploading file from path, %s", img)
+    def _upload_file(self, path):
+        _LOGGER.debug("Uploading file from path, %s", path)
 
-        if not self.hass.config.is_allowed_path(img):
-            _LOGGER.error("Path not allowed: %s", img)
+        if not self.hass.config.is_allowed_path(path):
+            _LOGGER.error("Path not allowed: %s", path)
             return
-        with open(img, "rb") as upfile:
-            imgfile = upfile.read()
-        content_type = mimetypes.guess_type(img)[0]
-        mxc = self._client.upload(imgfile, content_type)
+        content_type = mimetypes.guess_type(path)[0]
+        with open(path, "rb") as upfile:
+            return self._client.upload(upfile, content_type)
+
+    def _send_image(self, img, target_rooms):
+        url = self._upload_file(img)
+        filename = os.path.basename(img)
+
         for target_room in target_rooms:
             try:
                 room = self._join_or_get_room(target_room)
-                room.send_image(mxc, img)
+                room.send_image(url, filename)
             except MatrixRequestError as ex:
                 _LOGGER.error(
                     "Unable to deliver message to room '%s': %d, %s",
@@ -374,19 +378,13 @@ class MatrixBot:
                 )
 
     def _send_video(self, vid, target_rooms):
-        _LOGGER.debug("Uploading file from path, %s", vid)
+        url = self._upload_file(vid)
+        filename = os.path.basename(vid)
 
-        if not self.hass.config.is_allowed_path(vid):
-            _LOGGER.error("Path not allowed: %s", vid)
-            return
-        with open(vid, "rb") as upfile:
-            vidfile = upfile.read()
-        content_type = mimetypes.guess_type(vid)[0]
-        mxc = self._client.upload(vidfile, content_type)
         for target_room in target_rooms:
             try:
                 room = self._join_or_get_room(target_room)
-                room.send_video(mxc, vid)
+                room.send_video(url, filename)
             except MatrixRequestError as ex:
                 _LOGGER.error(
                     "Unable to deliver message to room '%s': %d, %s",
